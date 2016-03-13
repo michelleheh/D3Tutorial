@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.subunit.SCT { fill: #ddc; }
+.subunit.WLS { fill: #cdd; }
+.subunit.NIR { fill: #cdc; }
+.subunit.ENG { fill: #dcd; }
+
+.subunit.IRL,
+.subunit-label.IRL {
+  display: none;
+}
+
+.subunit-boundary {
+  fill: none;
+  stroke: #777;
+  stroke-dasharray: 2,2;
+  stroke-linejoin: round;
+}
+
+.subunit-boundary.IRL {
+  stroke: #aaa;
+}
+
+.subunit-label {
+  fill: #777;
+  fill-opacity: .5;
+  font-size: 20px;
+  font-weight: 300;
+  text-anchor: middle;
+}
+
+.place,
+.place-label {
+  fill: #444;
+}
+
+text {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  pointer-events: none;
+}
+
+</style>
+<body>
+<script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script src="//d3js.org/topojson.v1.min.js"></script>
+<script>
+// soucrce https://bost.ocks.org/mike/map/
+
+// "http-server -p 8008 &" in terminal --> hosted at http://localhost:8008
+// svg canvas size
+var width = 960
+    height = 1160;
+// generate projection of the map
+var projection = d3.geo.albers()
+    .center([0, 55.4])
+    .rotate([4.4, 0])
+    .parallels([50, 60])
+    .scale(6000)
+    .translate([width /2, height / 2]);
+// generate path for map
+var path = d3.geo.path()
+    .projection(projection)
+    .pointRadius(2);// define radius of points
+// generate svg and append to body
+var svg = d3.select('body').append('svg')
+    .attr('width', width)
+    .attr('height', height);
+
+// get data from JSON file
+d3.json("uk.json", function(error, uk) {
+  // converts topoJSON back to GeoJSON
+  var subunits = topojson.feature(uk, uk.objects.subunits),
+      places = topojson.feature(uk, uk.objects.places);
+  // append subunits paths
+  svg.selectAll('.subunits')
+    .data(subunits.features)
+  .enter().append('path')
+    .attr('class', function(d) { return 'subunit ' + d.id})
+    .attr('d', path);
+  // geneate interior boarder of subunits
+  svg.append("path")
+    .datum(topojson.mesh(uk, uk.objects.subunits, function(a, b) { return a !== b && a.id !== "IRL"; }))
+    .attr("d", path)
+    .attr("class", "subunit-boundary");
+  // geneate exterior boarder of subunits
+  svg.append("path")
+    .datum(topojson.mesh(uk, uk.objects.subunits, function(a, b) { return a === b && a.id === "IRL"; }))
+    .attr("d", path)
+    .attr("class", "subunit-boundary IRL");
+  // append lables for subunits
+  svg.selectAll(".subunit-label")
+    .data(topojson.feature(uk, uk.objects.subunits).features)
+  .enter().append("text")
+    .attr("class", function(d) { return "subunit-label " + d.id; })
+    .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
+    .attr("dy", ".35em")
+    .text(function(d) { return d.properties.name; });
+
+  // append dots for cities
+  svg.append("path")
+    .datum(places)
+    .attr("d", path)
+    .attr("class", "place");
+  // append lables for each cities
+  svg.selectAll(".place-label")
+    .data(places.features)
+  .enter().append("text")
+    .attr("class", "place-label")
+    .attr("transform", function(d) { return "translate(" + projection(d.geometry.coordinates) + ")"; })
+    .attr("x", function(d) { return d.geometry.coordinates[0] > -1 ? 6 : -6; })
+    .attr("dy", ".35em")
+    .style("text-anchor", function(d) { return d.geometry.coordinates[0] > -1 ? "start" : "end"; })
+    .text(function(d) { return d.properties.name; });
+});
+
+</script>
