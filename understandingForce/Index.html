@@ -2,26 +2,40 @@
 <html>
 <head>
   <meta charset='utf-8'>
-  <title>Force Layout Example 2</title>
+  <title>Force Layout Example 3</title>
 <style>
 
 .node {
   fill: #ccc;
   stroke: #fff;
-  stroke-width: 2px;
+  stroke-width: 1px;
 }
 
 .link {
   stroke: #777;
-  stroke-width: 2px;
+  stroke-width: 1px;
+}
+
+button {
+    position: absolute;
+    width: 30px;
+}
+button#slow {
+    margin-left: 40px;
 }
 
 </style>
 </head>
 <body>
+    <button id='advance' title='Advance Layout One Increment'>
+        <i class='fa fa-step-forward'>foward</i>
+    </button>
+    <button id='slow'    title='Run Layout in Slow Motion'>
+        <i class='fa fa-play'>play</i>
+    </button>
 <script src='http://d3js.org/d3.v3.min.js'></script>
 <script>
-
+//http://bl.ocks.org/sathomas/26648f33f3bc9725604a
 // define canvas size
 var width = 640,
     height = 480;
@@ -105,32 +119,55 @@ var link = svg.selectAll('.link')
     .data(links)
     .enter().append('line')
     .attr('class', 'link')
-// append new node
+    .attr('x1', function(d) { return nodes[d.source].x; })
+    .attr('y1', function(d) { return nodes[d.source].y; })
+    .attr('x2', function(d) { return nodes[d.target].x; })
+    .attr('y2', function(d) { return nodes[d.target].y; });
+// append new nodes
 var node = svg.selectAll('.node')
     .data(nodes)
     .enter().append('circle')
     .attr('class', 'node')
+    .attr('r', width/50)
+    .attr('cx', function(d) { return d.x; })
+    .attr('cy', function(d) { return d.y; });
 // generating force layout
 var force = d3.layout.force()
     .size([width, height])
     .nodes(nodes)
-    .links(links)
-//define linkdistance
+    .links(links);
+// define linkdistance
 force.linkDistance(width/3);
+// define animation parameters
+var animating = false,
+    animationStep = 400;
+
 // start force layout
-force.on('end', function() {
+force.on('tick', function() {
   //adding node attributes
-  node.attr('r', width/100)
+  node.transition().ease('linear').duration(animationStep)
       .attr('cx', function(d) { return d.x; })
       .attr('cy', function(d) { return d.y; });
   //connecting nodes with links
-  link.attr('x1', function(d) { return d.source.x; })
+  link.transition().ease('linear').duration(animationStep)
+      .attr('x1', function(d) { return d.source.x; })
       .attr('y1', function(d) { return d.source.y; })
       .attr('x2', function(d) { return d.target.x; })
       .attr('y2', function(d) { return d.target.y; });
-});
 
-force.start();
+  force.stop();
+
+  if (animating) {
+    setTimeout( function() { force.start(); }, animationStep);
+  }
+});
+//activate the foward button
+d3.select('#advance').on('click', force.start);
+//activate the playbutton
+d3.select('#slow').on('click', function() {
+    animating = true;
+    force.start();
+});
 
 </script>
 </body>
